@@ -49,11 +49,13 @@ def sense(p, Z):
     numCols = len(p[0])
     q = [[0 for x in range(numCols)] for x in range(numRows)]
 
+    #iterate through rows and columns and determine measurement probability
     for y in range(numRows):
         for x in range(numCols):
             hit = (Z == colors[y][x])
             q[y][x] = p[y][x] * (hit * sensor_right + (1-hit) * (1-sensor_right))
 
+    #normalize
     s = sum(map(sum, q))
     for y in range(numRows):
         for x in range(numCols):
@@ -65,8 +67,10 @@ def move(p, U):
     numRows = len(p)
     numCols = len(p[0])
 
+    #initialize resulting matrix first
     q = [[0 for x in range(numCols)] for x in range(numRows)]
 
+    #iterate through rows and columns and determine motion probability
     for y in range(numRows):
         for x in range(numCols):
             rowMove = U[0]

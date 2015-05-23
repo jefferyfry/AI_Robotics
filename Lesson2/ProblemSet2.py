@@ -1,6 +1,9 @@
 __author__ = 'jeffro'
-# Write a function 'filter' that implements a multi-
-# dimensional Kalman Filter for the example given
+# Fill in the matrices P, F, H, R and I at the bottom
+#
+# This question requires NO CODING, just fill in the
+# matrices where indicated. Please do not delete or modify
+# any provided code OR comments. Good luck!
 
 from math import *
 
@@ -139,55 +142,56 @@ class matrix:
 
 ########################################
 
-# Implement the filter function below
-
-def kalman_filter(x, P):
-
+def filter(x, P):
     for n in range(len(measurements)):
 
-        #### measurement update - using Anne Paulson Notes ####
-        #matrix the measurement
-        Z = matrix([[measurements[n]]])
-
-        #calculate y  - difference between the move and what was expected
-        y = Z - H * x
-
-        #calculate S - the covariance of the move
-        S = H * P * H.transpose() + R
-
-        #calculate K - Kalman filter
-        K = P * H.transpose() * S.inverse();
-
-        #calculate the updated x
-        x = x + K * y
-
-        #calculate P - uncertainty
-        P = (I-K*H)*P
-
-        #### prediction ####
-        #calculate next x
-        x = F * x + u
-
-        #update the covariance matrix P
+        # prediction
+        x = (F * x) + u
         P = F * P * F.transpose()
 
-    return x,P
+        # measurement update
+        Z = matrix([measurements[n]])
+        y = Z.transpose() - (H * x)
+        S = H * P * H.transpose() + R
+        K = P * H.transpose() * S.inverse()
+        x = x + (K * y)
+        P = (I - (K * H)) * P
 
-############################################
-### use the code below to test your filter!
-############################################
+    print 'x= '
+    x.show()
+    print 'P= '
+    P.show()
 
-measurements = [1, 2, 3]
+########################################
 
-x = matrix([[0.], [0.]]) # initial state (location and velocity)
-P = matrix([[1000., 0.], [0., 1000.]]) # initial uncertainty
-u = matrix([[0.], [0.]]) # external motion
-F = matrix([[1., 1.], [0, 1.]]) # next state function
-H = matrix([[1., 0.]]) # measurement function
-R = matrix([[1.]]) # measurement uncertainty
-I = matrix([[1., 0.], [0., 1.]]) # identity matrix
+print "### 4-dimensional example ###"
 
-print kalman_filter(x, P)
-# output should be:
-# x: [[3.9996664447958645], [0.9999998335552873]]
-# P: [[2.3318904241194827, 0.9991676099921091], [0.9991676099921067, 0.49950058263974184]]
+measurements = [[5., 10.], [6., 8.], [7., 6.], [8., 4.], [9., 2.], [10., 0.]] # 6 x 2
+initial_xy = [4., 12.]
+
+# measurements = [[1., 4.], [6., 0.], [11., -4.], [16., -8.]]
+# initial_xy = [-4., 8.]
+
+# measurements = [[1., 17.], [1., 15.], [1., 13.], [1., 11.]]
+# initial_xy = [1., 19.]
+
+dt = 0.1
+
+x = matrix([[initial_xy[0]], [initial_xy[1]], [0.], [0.]]) # initial state (location and velocity)
+u = matrix([[0.], [0.], [0.], [0.]]) # external motion
+
+#### DO NOT MODIFY ANYTHING ABOVE HERE ####
+#### fill this in, remember to use the matrix() function!: ####
+
+P = matrix([[0,0,0,0],[0,0,0,0],[0,0,1000.,0],[0,0,0,1000.]])# initial uncertainty: 0 for positions x and y, 1000 for the two velocities
+#P match size of F matrix
+F = matrix([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])# next state function: generalize the 2d version to 4d
+H = matrix([[1, 0, 0., 0.],[0, 1, 0., 0.]])# measurement function: reflect the fact that we observe x and y but not the two velocities
+#H is tricky. needed to be a 2x4 matrix in order to result in 2x1 to match Z matrix. so H (2x4) * x (4x1) = (2x1)
+R = matrix([[.1,0],[0,.1]])# measurement uncertainty: use 2x2 matrix with 0.1 as main diagonal
+I = matrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])# 4d identity matrix
+
+###### DO NOT MODIFY ANYTHING HERE #######
+
+filter(x, P)
+
