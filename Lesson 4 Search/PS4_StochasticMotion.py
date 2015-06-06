@@ -44,55 +44,40 @@ def stochastic_value(grid,goal,cost_step,collision_cost,success_prob):
     while change:
         change = False
         for row in range(len(grid)):
-            #print '     row=',row
             for col in range(len(grid[0])):
-                #print '          col=',col
                 if row == goal[0] and col == goal[1]:
                     if value[row][col]>0:
                         change = True
                         value[row][col] = 0
                         policy[row][col] = '*'
                 elif grid[row][col] == 0:
-                    for i in range(len(delta)):
-                        #row,col forward neighbor row
-                        nbrRow = row + delta[i][0]
-                        nbrCol = col + delta[i][1]
+                    #cycle through the neighbor cells
+                    for indexNbr in range(len(delta)):
                         nbrVal = cost_step
+                        #cycle through the possible moves (left,forward, right)
+                        for move in range(-1,2):
+                            nbrRow = row+delta[(indexNbr+move)%4][0]
+                            nbrCol = col+delta[(indexNbr+move)%4][1]
 
-                        #row,col left neighbor row
-                        nbrLeftRow = row + delta[(i+1)%4][0]
-                        nbrLeftCol = col + delta[(i+1)%4][1]
+                            if move == 0: #success
+                                outcome = success_prob
+                            else: #fail
+                                outcome = failure_prob
 
-                        #row,col right neighbor row
-                        nbrRightRow = row + delta[(i-1)%4][0]
-                        nbrRightCol = col + delta[(i-1)%4][1]
-
-                        #if forward nbr cell is valid then calculate costs
-                        if nbrRow >=0 and nbrCol >= 0 and nbrRow < len(grid) and nbrCol < len(grid[0]) and grid[nbrRow][nbrCol]==0:
-                            nbrVal = nbrVal + value[nbrRow][nbrCol]*success_prob
-
-                            #calulate cost for left going off grid
-                            if nbrLeftRow < 0 or nbrLeftCol < 0 or nbrLeftRow >= len(grid) or nbrLeftCol >= len(grid[0]):
-                                nbrVal = nbrVal + collision_cost * failure_prob
-                            #calculate left cost otherwise
+                            #calculate costs for in grid
+                            if nbrRow >=0 and nbrCol >= 0 and nbrRow < len(grid) and nbrCol < len(grid[0]) and grid[nbrRow][nbrCol]==0:
+                                nbrVal = nbrVal + value[nbrRow][nbrCol]*outcome
+                            #collision costs for out of grid
                             else:
-                                nbrVal = nbrVal + value[nbrLeftRow][nbrLeftCol] * failure_prob
+                                nbrVal = nbrVal + collision_cost*outcome
 
-                            #calulate cost for right going off grid
-                            if nbrRightRow < 0 or nbrRightCol < 0 or nbrRightRow >= len(grid) or nbrRightCol >= len(grid[0]):
-                                nbrVal = nbrVal + collision_cost * failure_prob
-                            #calculate right cost otherwise
-                            else:
-                                nbrVal = nbrVal + value[nbrRightRow][nbrRightCol] * failure_prob
-
-                            if nbrVal < value[row][col]:
-                                change = True
-                                value[row][col] = nbrVal
-                                policy[row][col] = delta_name[i]
-                                #print '====='
-                                #for debugRow in value:
-                                #    print debugRow
-
+                        if nbrVal < value[row][col]:
+                            change = True
+                            value[row][col] = nbrVal
+                            policy[row][col] = delta_name[indexNbr]
+                            #print '====='
+                            #for debugRow in value:
+                            #    print debugRow
 
     return value, policy
 
