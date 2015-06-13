@@ -85,10 +85,11 @@ def stochastic_value(grid,goal,cost_step,collision_cost,success_prob):
 #  Use the code below to test your solution
 # ---------------------------------------------
 
-grid = [[0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 1, 1, 0]]
+#grid = [[0, 0, 0, 0],
+#        [0, 0, 0, 0],
+#        [0, 0, 0, 0],
+#        [0, 1, 1, 0]]
+grid = [[0, 0, 0, 0],[0, 0, 0, 0]]
 goal = [0, len(grid[0])-1] # Goal is in top right corner
 cost_step = 1
 collision_cost = 100
