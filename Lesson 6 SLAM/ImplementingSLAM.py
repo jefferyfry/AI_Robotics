@@ -505,11 +505,53 @@ def print_result(N, num_landmarks, result):
 ############## ENTER YOUR CODE BELOW HERE ###################
 
 def slam(data, N, num_landmarks, motion_noise, measurement_noise):
-    #
-    #
-    # Add your code here!
-    #
-    #
+    #build the omega matrix it will be N+num_landmarks x N+num_landmarks
+    omega = [[[0,0] for row in range(N+num_landmarks)] for col in range(N+num_landmarks)]
+
+    #build xi matrix will be N+num_landmarks x 1
+    xi = [[0,0] for row in range(N+num_landmarks)]
+
+    #strengths
+    motionStrength = 1.0/motion_noise
+    measurementStrength = 1.0/measurement_noise
+
+    #now cycle through the data
+    for xyi in range(N-1):
+        dataPoint = data[xyi]
+        ZArray = dataPoint[0]
+        motion = dataPoint[1]
+
+        #process motion
+        for xory in range(2):
+            #1st row
+            omega[xyi][xyi][xory]+= motionStrength
+            omega[xyi][xyi+1][xory]-= motionStrength
+            xi[xyi][xory] -= motion[xory]*motionStrength
+            #2nd row
+            omega[xyi+1][xyi][xory]-= motionStrength
+            omega[xyi+1][xyi+1][xory]+= motionStrength
+            xi[xyi+1][xory] += motion[xory]*motionStrength
+
+        #process land marks
+        for measureIndex in range(len(ZArray)):
+            measurement = ZArray[measureIndex]
+            landmarkIndex = measurement[0]
+            measureValue = [measurement[1],measurement[2]]
+
+            for xory in range(2):
+                #1st row
+                omega[xyi][xyi][xory]+= measurementStrength
+                omega[xyi][N+measureIndex][xory]-= measurementStrength
+                xi[xyi][xory] -= measureValue[xory]*measurementStrength
+
+                #2nd row
+                omega[N+measureIndex][xyi][xory]-= measurementStrength
+                omega[N+measureIndex][N+measureIndex][xory]+= measurementStrength
+                xi[N+measureIndex][xory] += measureValue[xory]*measurementStrength
+
+    mu = matrix(omega).inverse() * matrix(xi)
+
+
     return mu # Make sure you return mu for grading!
 
 ############### ENTER YOUR CODE ABOVE HERE ###################
@@ -610,9 +652,9 @@ test_data2 = [[[[0, 26.543274387283322, -6.262538160312672], [3, 9.9373968257997
 
 ### Uncomment the following three lines for test case 1 ###
 
-#result = slam(test_data1, 20, 5, 2.0, 2.0)
-#print_result(20, 5, result)
-#print result
+result = slam(test_data1, 20, 5, 2.0, 2.0)
+print_result(20, 5, result)
+print result
 
 
 ### Uncomment the following three lines for test case 2 ###
@@ -620,6 +662,7 @@ test_data2 = [[[[0, 26.543274387283322, -6.262538160312672], [3, 9.9373968257997
 #result = slam(test_data2, 20, 5, 2.0, 2.0)
 #print_result(20, 5, result)
 #print result
+
 
 
 
