@@ -266,10 +266,26 @@ class matrix:
 
         res = matrix()
         res.zero(dimx, dimy)
-        for i in range(len(list1)):
-            for j in range(len(list2)):
+        #copy the rows, cols starting from 0,0 to the row, cols mapped by list1,list2
+        for i in range(len(list1)): #row
+            for j in range(len(list2)): # col
                 res.value[list1[i]][list2[j]] = self.value[i][j]
         return res
+
+    def reduce(self, dimx, dimy, list1, list2 = []):
+        if list2 == []:
+            list2 = list1
+        if len(list1) > self.dimx or len(list2) > self.dimy:
+            raise ValueError, "list invalid in expand()"
+
+        res = matrix()
+        res.zero(dimx, dimy)
+        #copy the rows, cols starting from 0,0 to the row, cols mapped by list1,list2
+        for i in range(len(list1)): #row
+            for j in range(len(list2)): # col
+                res.value[i][j] = self.value[list1[i]][list2[j]]
+        return res
+
 
     # ------------
     #
@@ -562,11 +578,97 @@ def slam(data, N, num_landmarks, motion_noise, measurement_noise):
 #
 
 def online_slam(data, N, num_landmarks, motion_noise, measurement_noise):
-    #
-    #
-    # Enter your code here!
-    #
-    #
+    # Set the dimension of the filter
+    dim = 2 * (1 + num_landmarks)
+
+    # make the constraint information matrix and vector
+    Omega = matrix()
+    Omega.zero(dim, dim)
+    Omega.value[0][0] = 1.0
+    Omega.value[1][1] = 1.0
+
+    Xi = matrix()
+    Xi.zero(dim, 1)
+    Xi.value[0][0] = world_size / 2.0
+    Xi.value[1][0] = world_size / 2.0
+
+    # process the data
+    for k in range(len(data)):
+        #set up lists for mapping
+        #0,2->dim
+        expandMap = []
+        expandMap.append(0)
+        expandMap.append(1)
+        for i in range(4,dim+2):
+            expandMap.append(i)
+
+        #expand here for the new data point to set up Omega' and Xi'
+        Omega = Omega.expand(Omega.dimx+2,Omega.dimy+2,expandMap,expandMap)
+        Xi = Xi.expand(Xi.dimx+2,Xi.dimy,expandMap,[0])
+
+        # n is the index of the robot pose in the matrix/vector
+        # n is the index of the motion data
+        n = 0
+
+        measurement = data[k][0]
+        motion      = data[k][1]
+
+        # integrate the measurements
+        for i in range(len(measurement)):
+
+            # m is the index of the landmark coordinate in the matrix/vector
+            m = 2 * (2 + measurement[i][0])
+
+            # update the information maxtrix/vector based on the measurement
+            # b handles x and y data 0=x 1=y
+            # n = 0, b = 0
+            #   [0] [0]
+            for b in range(2):
+                Omega.value[n+b][n+b] +=  1.0 / measurement_noise
+                Omega.value[m+b][m+b] +=  1.0 / measurement_noise
+                Omega.value[n+b][m+b] += -1.0 / measurement_noise
+                Omega.value[m+b][n+b] += -1.0 / measurement_noise
+                Xi.value[n+b][0]      += -measurement[i][1+b] / measurement_noise
+                Xi.value[m+b][0]      +=  measurement[i][1+b] / measurement_noise
+
+
+        # update the information maxtrix/vector based on the robot motion
+        for b in range(4):
+            Omega.value[n+b][n+b] +=  1.0 / motion_noise
+        for b in range(2):
+            Omega.value[n+b  ][n+b+2] += -1.0 / motion_noise
+            Omega.value[n+b+2][n+b  ] += -1.0 / motion_noise
+            Xi.value[n+b  ][0]        += -motion[b] / motion_noise
+            Xi.value[n+b+2][0]        +=  motion[b] / motion_noise
+
+
+        #now have Omega' and Xi'
+        # determine A, B, C
+        #A list is row = 0, col 2->(dim+2)
+        takeList = []
+        for i in range(2,dim+2):
+            takeList.append(i)
+        A = Omega.take([0,1],takeList)
+        B = Omega.take([0,1],[0,1])
+        C = Xi.take([0,1],[0])
+
+        #now reduce the size of omega,xi
+        #2 - dim + 2
+        reduceList = []
+        for i in range(2,dim+2):
+            reduceList.append(i)
+        Omega = Omega.reduce(dim,dim,reduceList,reduceList)
+        Xi = Xi.reduce(dim,Xi.dimy,reduceList,[0])
+
+        #now calculate Omega and Xi
+        #Omega = Omega' - A(t) * B(-1) * A
+        Omega = Omega - A.transpose() * B.inverse()*A
+        #Xi = Xi' - A(t) * B(-1) * C
+        Xi = Xi - A.transpose() * B.inverse() * C
+
+    # compute best estimate
+    mu = Omega.inverse() * Xi
+
     return mu, Omega # make sure you return both of these matrices to be marked correct.
 
 # --------------------------------
@@ -686,8 +788,8 @@ answer_omega1      = matrix([[0.36603773584905663, 0.0, -0.169811320754717, 0.0,
                              [-0.1811320754716981, 0.0, -0.4056603773584906, 0.0, -0.360377358490566, 0.0, 1.2339622641509433, 0.0],
                              [0.0, -0.1811320754716981, 0.0, -0.4056603773584906, 0.0, -0.360377358490566, 0.0, 1.2339622641509433]])
 
-#result = online_slam(testdata1, 5, 3, 2.0, 2.0)
-#solution_check(result, answer_mu1, answer_omega1)
+result = online_slam(testdata1, 5, 3, 2.0, 2.0)
+solution_check(result, answer_mu1, answer_omega1)
 
 
 # -----------
@@ -713,6 +815,6 @@ answer_omega2      = matrix([[0.22871751620895048, 0.0, -0.11351536555795691, 0.
                              [-0.11351536555795691, 0.0, -0.46327947920510265, 0.0, 0.7867205207948973, 0.0],
                              [0.0, -0.11351536555795691, 0.0, -0.46327947920510265, 0.0, 0.7867205207948973]])
 
-#result = online_slam(testdata2, 6, 2, 3.0, 4.0)
-#solution_check(result, answer_mu2, answer_omega2)
+result = online_slam(testdata2, 6, 2, 3.0, 4.0)
+solution_check(result, answer_mu2, answer_omega2)
 

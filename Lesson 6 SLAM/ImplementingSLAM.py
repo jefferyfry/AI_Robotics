@@ -509,6 +509,7 @@ def slam(data, N, num_landmarks, motion_noise, measurement_noise):
     omegaX = [[0. for row in range(N+num_landmarks)] for col in range(N+num_landmarks)]
     omegaY = [[0. for row in range(N+num_landmarks)] for col in range(N+num_landmarks)]
 
+    #set initial state
     omegaX[0][0] = 1.
     omegaY[0][0] = 1.
 
@@ -516,6 +517,7 @@ def slam(data, N, num_landmarks, motion_noise, measurement_noise):
     xiX = [[0.] for row in range(N+num_landmarks)]
     xiY = [[0.] for row in range(N+num_landmarks)]
 
+    #set initial state
     xiX[0][0] = world_size/2.
     xiY[0][0] = world_size/2.
 
@@ -580,8 +582,8 @@ def slam(data, N, num_landmarks, motion_noise, measurement_noise):
     muX = matrix(omegaX).inverse() * matrix(xiX)
     muY = matrix(omegaY).inverse() * matrix(xiY)
 
+    #create complete X,Y mu matrix
     mu = []
-
     for i in range(muX.dimx):
         mu.append(muX.value[i])
         mu.append(muY.value[i])
